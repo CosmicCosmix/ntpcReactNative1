@@ -1,12 +1,25 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 24;
+
+// Calculate the height for the image section
+// Card min height is 380, so image should cover: total height - card height + curve overlap
+const CARD_MIN_HEIGHT = 380;
+const CURVE_OVERLAP = 32; // The curved top border radius
+const IMAGE_HEIGHT = height - CARD_MIN_HEIGHT + CURVE_OVERLAP;
 
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#00B9A9',
+    },
+    mainContainer: {
+        flex: 1,
+    },
+    imageSection: {
+        height: IMAGE_HEIGHT,
+        overflow: 'hidden',
     },
     backgroundImage: {
         flex: 1,
@@ -23,28 +36,14 @@ export const styles = StyleSheet.create({
         paddingTop: 40,
         justifyContent: 'space-between',
     },
-    topTextContainer: {
-        marginTop: 20,
+    centeredLogoContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    topText: {
-        fontSize: 35,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        lineHeight: 40,
-    },
-    topTextBlue: {
-        fontSize: 35,
-        fontWeight: '700',
-        color: '#00B9A9',
-        lineHeight: 40,
-    },
-    bottomLogoContainer: {
-        alignItems: 'flex-end',
-        marginBottom: 20,
-    },
-    bottomLogo: {
-        width: 140,
-        height: 100,
+    centeredLogo: {
+        width: 200,
+        height: 150,
     },
     logoContainer: {
         marginBottom: 12,
@@ -54,23 +53,18 @@ export const styles = StyleSheet.create({
         height: 60,
     },
     cardContainer: {
-        flex: 1.2,
-        justifyContent: 'flex-end',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        minHeight: CARD_MIN_HEIGHT,
     },
-    glassWrapper: {
-        marginHorizontal: 0,
+    solidCardWrapper: {
+        flex: 1,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255,255,255,0.90)',
-    },
-    androidGlassFallback: {
-        backgroundColor: 'rgba(255,255,255,0.90)',
-    },
-    grainOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        opacity: 0.4,
+        backgroundColor: '#FFFFFF',
     },
     cardInner: {
         paddingTop: 32,

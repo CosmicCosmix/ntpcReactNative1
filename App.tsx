@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import {
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -9,21 +8,15 @@ import {
   Image,
   Animated,
   Dimensions,
-  useColorScheme,
-  Platform,
   ImageBackground,
   Keyboard,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from '@react-native-community/blur';
 import { styles } from './assets/css/App.styles';
-
 import Icon from 'react-native-vector-icons/FontAwesome';
-import BootstrapIcon from 'react-native-vector-icons/FontAwesome5';
 const { width, height } = Dimensions.get('window');
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
   const [currentScreen, setCurrentScreen] = useState<'login' | 'otp'>('login');
   const [username, setUsername] = useState('');
   const [otp, setOtp] = useState('');
@@ -65,74 +58,43 @@ function App() {
     <SafeAreaProvider>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-        {/* Full Screen Background with Plant Image */}
-        <ImageBackground
-          source={require('./assets/images/login-page/plant-01.jpg')}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        >
-
-          {/* Content */}
-          <View style={styles.background}>
-            {/* Top Left Text */}
-            <View style={styles.topTextContainer}>
-              <Text style={styles.topText}><Text style={styles.topTextBlue}>Log In </Text>to stay on</Text>
-              <Text style={styles.topText}>top of your Tasks</Text>
-              <Text style={styles.topText}>and <Text style={styles.topTextBlue}>Projects.</Text></Text>
-            </View>
-
-            {/* Bottom Right Logo */}
-            <View style={styles.bottomLogoContainer}>
-              <Image
-                source={require('./assets/images/logo/ntpc-logo-white.png')}
-                style={styles.bottomLogo}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-
-          {/* Glass Card with Grainy Effect */}
-          <View style={styles.cardContainer}>
-            {Platform.OS === 'ios' ? (
-              <BlurView
-                style={styles.glassWrapper}
-                blurType="light"
-                blurAmount={30}
-                reducedTransparencyFallbackColor="rgba(255,255,255,0.75)"
-              >
-                <View style={styles.grainOverlay} />
-                <View style={styles.cardInner}>
-                  <CardContent
-                    slideAnim={slideAnim}
-                    username={username}
-                    setUsername={setUsername}
-                    otp={otp}
-                    setOtp={setOtp}
-                    handleLogin={handleLogin}
-                    handleBack={handleBack}
-                    handleVerifyOTP={handleVerifyOTP}
-                  />
-                </View>
-              </BlurView>
-            ) : (
-              <View style={[styles.glassWrapper, styles.androidGlassFallback]}>
-                <View style={styles.grainOverlay} />
-                <View style={styles.cardInner}>
-                  <CardContent
-                    slideAnim={slideAnim}
-                    username={username}
-                    setUsername={setUsername}
-                    otp={otp}
-                    setOtp={setOtp}
-                    handleLogin={handleLogin}
-                    handleBack={handleBack}
-                    handleVerifyOTP={handleVerifyOTP}
-                  />
-                </View>
+        <View style={styles.mainContainer}>
+          {/* Background Image Section - Only above card */}
+          <View style={styles.imageSection}>
+            <ImageBackground
+              source={require('./assets/images/login-page/plant-01.jpg')}
+              style={styles.backgroundImage}
+              resizeMode="cover"
+            >
+              {/* Centered Logo */}
+              <View style={styles.centeredLogoContainer}>
+                <Image
+                  source={require('./assets/images/logo/ntpc-logo-white.png')}
+                  style={styles.centeredLogo}
+                  resizeMode="contain"
+                />
               </View>
-            )}
+            </ImageBackground>
           </View>
-        </ImageBackground>
+
+          {/* White Card - Overlaps image slightly */}
+          <View style={styles.cardContainer}>
+            <View style={styles.solidCardWrapper}>
+              <View style={styles.cardInner}>
+                <CardContent
+                  slideAnim={slideAnim}
+                  username={username}
+                  setUsername={setUsername}
+                  otp={otp}
+                  setOtp={setOtp}
+                  handleLogin={handleLogin}
+                  handleBack={handleBack}
+                  handleVerifyOTP={handleVerifyOTP}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
