@@ -1,14 +1,10 @@
 import { StyleSheet, Dimensions } from 'react-native';
-
 const { width, height } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 24;
-
-// Calculate the height for the image section
 // Card min height is 380, so image should cover: total height - card height + curve overlap
 const CARD_MIN_HEIGHT = 380;
-const CURVE_OVERLAP = 32; // The curved top border radius
+const CURVE_OVERLAP = 57; // The curved top border radius
 const IMAGE_HEIGHT = height - CARD_MIN_HEIGHT + CURVE_OVERLAP;
-
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -28,13 +24,7 @@ export const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 185, 169, 0.75)',
-    },
-    background: {
-        flex: 1,
-        paddingHorizontal: HORIZONTAL_PADDING,
-        paddingTop: 40,
-        justifyContent: 'space-between',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
     },
     centeredLogoContainer: {
         flex: 1,
@@ -44,13 +34,6 @@ export const styles = StyleSheet.create({
     centeredLogo: {
         width: 200,
         height: 150,
-    },
-    logoContainer: {
-        marginBottom: 12,
-    },
-    logo: {
-        width: 180,
-        height: 60,
     },
     cardContainer: {
         position: 'absolute',
@@ -75,7 +58,6 @@ export const styles = StyleSheet.create({
         borderTopRightRadius: 32,
         shadowOpacity: 0.15,
         shadowRadius: 16,
-        elevation: 18,
     },
     cardContent: {
         overflow: 'hidden',
@@ -97,11 +79,6 @@ export const styles = StyleSheet.create({
         paddingVertical: 4,
         paddingRight: 12,
         marginLeft: -4,
-    },
-    backArrow: {
-        fontSize: 26,
-        color: '#111827',
-        fontWeight: '600',
     },
     title: {
         fontSize: 32,
@@ -127,17 +104,6 @@ export const styles = StyleSheet.create({
     signUpLink: {
         color: '#00B9A9',
         fontWeight: '600',
-    },
-    inputLabelRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    inputLabel: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#9CA3AF',
-        marginLeft: 2,
     },
     inputContainer: {
         flexDirection: 'row',
@@ -172,7 +138,7 @@ export const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 6,
+
     },
     buttonDisabled: {
         backgroundColor: '#9EE3DC',
@@ -184,5 +150,4 @@ export const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
 });
-
 export { HORIZONTAL_PADDING };

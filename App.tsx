@@ -13,15 +13,62 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './assets/css/App.styles';
-import Icon from 'react-native-vector-icons/FontAwesome';
-const { width, height } = Dimensions.get('window');
-
+import Svg, { Path, Circle } from 'react-native-svg';
+const { width } = Dimensions.get('window');
+// Custom SVG Icon Components
+const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle
+      cx="12"
+      cy="7"
+      r="4"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M7 11V7a5 5 0 0 1 10 0v4"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 12H5M5 12l7 7M5 12l7-7"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
 function App() {
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'otp'>('login');
   const [username, setUsername] = useState('');
   const [otp, setOtp] = useState('');
   const slideAnim = useRef(new Animated.Value(0)).current;
-
   const handleLogin = () => {
     Keyboard.dismiss();
     if (username.trim()) {
@@ -29,12 +76,9 @@ function App() {
         toValue: -width,
         duration: 260,
         useNativeDriver: true,
-      }).start(() => {
-        setCurrentScreen('otp');
-      });
+      }).start();
     }
   };
-
   const handleBack = () => {
     Keyboard.dismiss();
     Animated.timing(slideAnim, {
@@ -42,18 +86,15 @@ function App() {
       duration: 260,
       useNativeDriver: true,
     }).start(() => {
-      setCurrentScreen('login');
       setOtp('');
     });
   };
-
   const handleVerifyOTP = () => {
     Keyboard.dismiss();
     if (otp.trim()) {
       console.log('Verifying OTP:', otp);
     }
   };
-
   return (
     <SafeAreaProvider>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -62,11 +103,13 @@ function App() {
           {/* Background Image Section - Only above card */}
           <View style={styles.imageSection}>
             <ImageBackground
-              source={require('./assets/images/login-page/plant-01.jpg')}
+              source={require('./assets/images/login-page/illustration-01.png')}
               style={styles.backgroundImage}
               resizeMode="cover"
             >
-              {/* Centered Logo */}
+              {/* Overlay */}
+              <View style={styles.overlay} />
+              {/* Foreground content */}
               <View style={styles.centeredLogoContainer}>
                 <Image
                   source={require('./assets/images/logo/ntpc-logo-white.png')}
@@ -76,7 +119,6 @@ function App() {
               </View>
             </ImageBackground>
           </View>
-
           {/* White Card - Overlaps image slightly */}
           <View style={styles.cardContainer}>
             <View style={styles.solidCardWrapper}>
@@ -99,7 +141,6 @@ function App() {
     </SafeAreaProvider>
   );
 }
-
 type CardContentProps = {
   slideAnim: Animated.Value;
   username: string;
@@ -110,7 +151,6 @@ type CardContentProps = {
   handleBack: () => void;
   handleVerifyOTP: () => void;
 };
-
 const CardContent: React.FC<CardContentProps> = ({
   slideAnim,
   username,
@@ -135,16 +175,15 @@ const CardContent: React.FC<CardContentProps> = ({
         <View style={styles.screen}>
           <Text style={styles.title}>Login</Text>
           <Text style={styles.subtitle}>
-            Don&apos;t have an account?{' '}
-            <Text style={styles.signUpLink}>Sign up</Text>
+            Don&apos;t have an account? <Text style={styles.signUpLink}>Sign up</Text>
           </Text>
-
-          {/* Username Input Field */}
+          {/* Username Input Field with SVG Icon */}
           <View style={styles.inputContainer}>
-            <Icon name="user" size={20} color="#9CA3AF" style={styles.inputIcon} />
+            <View style={styles.inputIcon}>
+              <UserIcon size={20} color="#9CA3AF" />
+            </View>
             <TextInput
               style={styles.input}
-              value={username}
               onChangeText={setUsername}
               placeholder="Enter username"
               placeholderTextColor="#C7CACD"
@@ -152,36 +191,32 @@ const CardContent: React.FC<CardContentProps> = ({
             />
           </View>
           <TouchableOpacity
-            style={[
-              styles.button,
-              !username.trim() && styles.buttonDisabled,
-            ]}
+            style={[styles.button, !username.trim() && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={!username.trim()}
           >
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
         </View>
-
         {/* OTP Screen */}
         <View style={styles.screen}>
           {/* Back button and Title on same row */}
           <View style={styles.headerRow}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backArrow}>←</Text>
+              <ArrowLeftIcon size={26} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.titleWithBack}>Enter OTP</Text>
           </View>
-
           <Text style={styles.subtitle}>
             We have sent a
             <Text style={styles.signUpLink}> 6 digit </Text>
             password to your email.
           </Text>
-
-          {/* OTP Input Field */}
+          {/* OTP Input Field with SVG Icon */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <View style={styles.inputIcon}>
+              <LockIcon size={20} color="#9CA3AF" />
+            </View>
             <TextInput
               style={styles.input}
               value={otp}
@@ -192,12 +227,8 @@ const CardContent: React.FC<CardContentProps> = ({
               maxLength={6}
             />
           </View>
-
           <TouchableOpacity
-            style={[
-              styles.button,
-              !otp.trim() && styles.buttonDisabled,
-            ]}
+            style={[styles.button, !otp.trim() && styles.buttonDisabled]}
             onPress={handleVerifyOTP}
             disabled={!otp.trim()}
           >
@@ -208,7 +239,4 @@ const CardContent: React.FC<CardContentProps> = ({
     </View>
   );
 };
-
-const HORIZONTAL_PADDING = 24;
-
 export default App;
