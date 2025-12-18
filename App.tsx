@@ -1,683 +1,369 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-    StyleSheet,
-    TextInput,
-    View,
-    Text,
-    ScrollView,
-    Image,
-    Keyboard,
-    TouchableOpacity,
-    KeyboardAvoidingView,
-    NativeEventEmitter,
-    NativeModules,
-    Platform,
-    Dimensions,
-    BackHandler,
-    Alert,
-    TextInput as RNTextInput
+  Animated,
+  Dimensions,
+  Image,
+  ImageBackground,
+  Keyboard,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import LoaderScreen from './LoaderScreen';
-import DeviceInfo from 'react-native-device-info';
-import CheckBox from '@react-native-community/checkbox';
-import { API_KEY } from "@env";
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
-import {
-    Card,
-    Button,
-    ActivityIndicator,
-} from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { styles } from './assets/css/App.styles';
+import { validateOtp, validateUser } from './services/authService';
+import Recaptcha, { RecaptchaRef } from 'react-native-recaptcha-that-works';
+import { RECAPTCHA_SITE_KEY } from './constants/config';
 
-import JailMonkey from 'jail-monkey';
-import { fetch } from 'react-native-ssl-pinning';
-import Recaptcha from 'react-native-recaptcha-that-works';
-import type { RecaptchaRef } from 'react-native-recaptcha-that-works';
-
-import {
-    certsSha256,
-    disableSslPinning,
-    ReqTimeOutInt,
-} from './constants/config';
-
-import VersionCheck from './components/VersionCheck';
-
-const { DeviceStatus } = NativeModules;
 const { width } = Dimensions.get('window');
 
-// API URLs
-const urlBaseProd = "https://webapp.ntpc.co.in/nqweldapi/api/";
-const urlValidateUser = urlBaseProd + "Auth/ValidateUserV2";
-const urlValidateOtp = urlBaseProd + "Auth/ValidateOTP";
+// Custom SVG Icon Components
+const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle
+      cx="12"
+      cy="7"
+      r="4"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
 
-// Types
-interface ApiResponse {
-    statusCode?: number;
-    statusDescLong?: string;
-    tokenString?: string;
-    userid?: string;
-    data?: Array<{
-        userLoginId: string;
-        userName: string;
-        role: string;
-        project: string;
-        tokenObj: {
-            accessToken: string;
-            refreshToken: string;
-        };
-    }>;
-    [key: string]: any; // Allow additional properties
-}
+const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M7 11V7a5 5 0 0 1 10 0v4"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
 
-interface DeviceStatusModule {
-    isJailBroken: (callback: (value: boolean) => void) => void;
-}
+const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M19 12H5M5 12l7 7M5 12l7-7"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
 
-const LoginScreen = () => {
-    const navigation = useNavigation<any>();
+function App() {
+  const [username, setUsername] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    // State management
-    const [userEmail, setUserEmail] = useState<string>('');
-    const [userPassword, setUserPassword] = useState<string>('');
-    const [loading, setLoading] = useState<boolean>(false);
-    const [errortext, setErrortext] = useState<string>('');
-    const [isOtpLoading, setIsOtpLoading] = useState<boolean>(false);
-    const [showOTPField, setShowOTPField] = useState<boolean>(false);
-    const [isEditUserid, setIsEditUserid] = useState<boolean>(true);
-    const [tempTokenStr, setTempTokenStr] = useState<string | null>(null);
-    const [reCaptchaToken, setReCaptchaToken] = useState<string | null>(null);
-    const [isRooted, setIsRooted] = useState<boolean>(false);
-    const [isIosRooted, setIsIosRooted] = useState<boolean>(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const recaptchaRef = useRef<RecaptchaRef | null>(null);
 
-    // Color states
-    const activeBGColor = '#002A6A';
-    const inActiveBGColor = '#E5E4E2';
-    const activeFontColor = '#FFFFFF';
-    const inActiveFontColor = '#000000';
-
-    const [bGColor, setBGColor] = useState<string>(activeBGColor);
-    const [fontColor, setFontColor] = useState<string>(activeFontColor);
-
-    // Refs
-    const passwordInputRef = useRef<RNTextInput>(null);
-    const recaptcha = useRef<RecaptchaRef>(null);
-
-    // ReCaptcha handlers
-    const send = (): void => {
-        recaptcha.current?.open();
-    };
-
-    const onVerify = (token: string): void => {
-        setReCaptchaToken(token);
-    };
-
-    const onExpire = (): void => {
-        console.warn('ReCaptcha expired!');
-        setReCaptchaToken(null);
-    };
-
-    // Check if user is already logged in
-    const checkAsync = async (): Promise<void> => {
-        try {
-            const tkn = await AsyncStorage.getItem('accessToken');
-            const rtkn = await AsyncStorage.getItem('refToken');
-            const usr = await AsyncStorage.getItem('UserId');
-
-            if (tkn && rtkn && usr) {
-                navigation.replace('MainDrawer');
-            }
-        } catch (error) {
-            console.error('Error checking login status:', error);
-        }
-    };
-
-    // Check if device is rooted
-    const checkRooted = async (): Promise<void> => {
-        try {
-            const rooteddev = await DeviceInfo.isEmulator();
-            if (JailMonkey.isJailBroken() || rooteddev) {
-                setIsRooted(true);
-                Alert.alert(
-                    'Security Warning',
-                    'This device is either Rooted or is an emulator',
-                    [{ text: 'Exit', onPress: () => BackHandler.exitApp() }]
-                );
-                return;
-            }
-        } catch (error) {
-            console.error('Error checking rooted status:', error);
-        }
-    };
-
-    // Check iOS jailbreak
-    const checkIosJailbreak = (): void => {
-        if (Platform.OS === 'ios' && DeviceStatus) {
-            const deviceStatusModule = DeviceStatus as DeviceStatusModule;
-            deviceStatusModule.isJailBroken((value: boolean) => {
-                if (value) {
-                    setIsIosRooted(true);
-                    Alert.alert(
-                        'Security Warning',
-                        'This iOS device is jailbroken',
-                        [{ text: 'Exit', onPress: () => BackHandler.exitApp() }]
-                    );
-                }
-            });
-        }
-    };
-
-    // Reset form
-    const handleResetPress = (): void => {
-        setIsEditUserid(true);
-        setShowOTPField(false);
-        setUserEmail('');
-        setUserPassword('');
-        setBGColor(activeBGColor);
-        setFontColor(activeFontColor);
-        setTempTokenStr(null);
-        setErrortext('');
-    };
-
-    // Get OTP
-    const handleGetOtpPress = async (): Promise<void> => {
-        setErrortext('');
-
-        if (!userEmail.trim()) {
-            Alert.alert('Error', 'Please enter your username');
-            return;
-        }
-
-        if (!reCaptchaToken) {
-            Alert.alert('Error', 'Please complete the captcha verification');
-            return;
-        }
-
-        setLoading(true);
-        setIsOtpLoading(true);
-
-        const requestBody = JSON.stringify({
-            userLoginId: userEmail.trim(),
-            captchaToken: reCaptchaToken,
-        });
-
-        try {
-            const response = await fetch(urlValidateUser, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'XAPIKEY': API_KEY
-                },
-                body: requestBody,
-                timeoutInterval: ReqTimeOutInt,
-                disableAllSecurity: Platform.OS === 'ios',
-                pkPinning: true,
-                sslPinning: {
-                    certs: certsSha256,
-                },
-            });
-
-            setLoading(false);
-            setIsOtpLoading(false);
-
-            if (response.status === 401) {
-                Alert.alert('Error', 'Your session token expired. Please try again.');
-                return;
-            }
-
-            if (response.status !== 200) {
-                Alert.alert('Error', 'Something went wrong. Please try again.');
-                return;
-            }
-
-            const resp = await response.json() as ApiResponse;
-
-            if (resp.statusCode !== 200) {
-                Alert.alert(
-                    'Error',
-                    `Something went wrong. Error: ${resp.statusDescLong || 'Unknown error'}. Please contact app administrator.`
-                );
-                return;
-            }
-
-            const tknString = resp.tokenString;
-            const usr = resp.userid;
-
-            if (!tknString || userEmail.trim() !== usr) {
-                Alert.alert('Error', 'Invalid response. Please try again.');
-                return;
-            }
-
-            setTempTokenStr(tknString);
-            Alert.alert('Success', 'If user exists, OTP sent to registered mobile number');
-            setShowOTPField(true);
-            setIsEditUserid(false);
-            setFontColor(inActiveFontColor);
-            setBGColor(inActiveBGColor);
-
-        } catch (error) {
-            setShowOTPField(false);
-            setIsEditUserid(true);
-            setLoading(false);
-            setIsOtpLoading(false);
-            const errorMessage = error instanceof Error ? error.message : 'Please check your connection';
-            Alert.alert('Error', `Network error: ${errorMessage}`);
-        }
-    };
-
-    // Login with OTP
-    const handleLoginPress = async (): Promise<void> => {
-        setErrortext('');
-
-        if (!userEmail.trim() || !userPassword.trim() || !tempTokenStr) {
-            Alert.alert('Error', 'All fields are mandatory.');
-            return;
-        }
-
-        const postbody = JSON.stringify({
-            userName: userEmail.trim(),
-            password: userPassword,
-            tokenString: tempTokenStr,
-        });
-
-        try {
-            setLoading(true);
-            const response = await fetch(urlValidateOtp, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: postbody,
-                timeoutInterval: ReqTimeOutInt,
-                disableAllSecurity: Platform.OS === 'ios',
-                pkPinning: true,
-                sslPinning: {
-                    certs: certsSha256,
-                },
-            });
-
-            setLoading(false);
-
-            if (response.status === 401) {
-                Alert.alert('Error', 'Your session token expired. Please try again.');
-                return;
-            }
-
-            if (response.status !== 200) {
-                Alert.alert('Error', 'Something went wrong. Please try again.');
-                return;
-            }
-
-            const resp = await response.json() as ApiResponse;
-
-            if (resp.statusCode !== 200) {
-                Alert.alert(
-                    'Error',
-                    `Login failed. Code: ${resp.statusCode}. Please contact app administrator.`
-                );
-                return;
-            }
-
-            if (!resp.data || !resp.data[0]) {
-                Alert.alert('Error', 'Invalid response. Please try again.');
-                return;
-            }
-
-            const retData = resp.data[0];
-            const { userLoginId, userName, role, project, tokenObj } = retData;
-
-            if (userEmail.trim() !== userLoginId) {
-                Alert.alert('Error', 'User validation failed. Please try again.');
-                return;
-            }
-
-            const { accessToken: jwtToken, refreshToken: refToken } = tokenObj || {};
-
-            if (!userName || !role || !jwtToken || !refToken) {
-                Alert.alert('Error', 'Incomplete authentication data. Please try again.');
-                return;
-            }
-
-            // Save to AsyncStorage
-            await AsyncStorage.multiSet([
-                ['accessToken', jwtToken],
-                ['refToken', refToken],
-                ['UserName', userName],
-                ['UserRole', role],
-                ['UserProject', project || ''],
-                ['UserId', userLoginId]
-            ]);
-
-            Alert.alert('Success', 'Login Successful', [
-                { text: 'OK', onPress: () => navigation.replace('MainDrawer') }
-            ]);
-
-        } catch (error) {
-            handleResetPress();
-            setLoading(false);
-            const errorMessage = error instanceof Error ? error.message : 'Please try again';
-            Alert.alert('Error', `Login failed: ${errorMessage}`);
-        }
-    };
-
-    // Sanitize user input
-    const sanitizeInput = (text: string): string => {
-        return text.trim().replace(/[^\w]/gi, '');
-    };
-
-    // Effects
-    useEffect(() => {
-        checkRooted();
-        checkIosJailbreak();
-        checkAsync();
-    }, []);
-
-    // Render rooted device warning
-    if (isRooted || isIosRooted) {
-        return (
-            <SafeAreaView style={styles.rootedContainer}>
-                <Text style={styles.rootedText}>
-                    Trust failed with this device. This device is rooted/jailbroken, which is a security breach.
-                </Text>
-            </SafeAreaView>
-        );
+  const openCaptcha = () => {
+    // If Recaptcha isn't ready for any reason, fail gracefully.
+    try {
+      recaptchaRef.current?.open();
+    } catch (e) {
+      setLoginLoading(false);
+      setError('Captcha could not be started. Please try again.');
     }
+  };
 
-    return (
-        <SafeAreaView style={styles.mainBody}>
-            <VersionCheck />
-            <LoaderScreen loading={loading} />
+  const handleLoginPress = () => {
+    Keyboard.dismiss();
+    if (loginLoading) return;
 
-            <KeyboardAvoidingView
-                style={styles.overlay}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={100}>
+    if (!username.trim()) return;
 
-                <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={styles.scrollContainer}>
+    setError('');
+    setLoginLoading(true);
 
-                    <View>
-                        {/* Logo Section */}
-                        <View style={styles.logoContainer}>
-                            <Image
-                                source={require('./assets/images/logo/ntpc-logo-white.png')}
-                                style={styles.logoImage}
-                            />
-                            <Text style={styles.appTitle}>NQWeld</Text>
-                            <Image
-                                source={require('./assets/images/login-page/plant-01.jpg')}
-                                style={styles.plantImage}
-                            />
-                        </View>
+    // Trigger invisible reCAPTCHA; once verified, onVerify() will run and call the API.
+    openCaptcha();
+  };
 
-                        {/* Username Input */}
-                        <View style={styles.SectionStyle}>
-                            <TextInput
-                                style={[styles.inputStyle, { backgroundColor: bGColor, color: fontColor }]}
-                                onChangeText={(text: string) => setUserEmail(sanitizeInput(text))}
-                                placeholder="Login Id"
-                                placeholderTextColor="#8b9cb5"
-                                autoCapitalize="none"
-                                keyboardType="default"
-                                returnKeyType="next"
-                                onSubmitEditing={() => passwordInputRef.current?.focus()}
-                                underlineColorAndroid="transparent"
-                                blurOnSubmit={false}
-                                editable={isEditUserid}
-                                value={userEmail}
-                                textAlign="center"
-                            />
-                        </View>
+  const handleRecaptchaVerify = async (token: string) => {
+    try {
+      const response = await validateUser(username.trim(), token);
 
-                        {/* Captcha Section */}
-                        <View style={styles.captchaContainer}>
-                            <CheckBox
-                                tintColor="#FFFFFF"
-                                onCheckColor="#FFFFFF"
-                                onTintColor="#FFFFFF"
-                                onFillColor="#00FF00"
-                                style={styles.checkbox}
-                                value={!!reCaptchaToken}
-                                disabled={true}
-                            />
-                            <Text style={styles.captchaText}>Captcha attempted?</Text>
+      if (response.statusCode === 200) {
+        Animated.timing(slideAnim, {
+          toValue: -width,
+          duration: 260,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        setError(response.statusDescShort || 'Invalid username. Please try again.');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
-                            <Recaptcha
-                                ref={recaptcha}
-                                siteKey="6Le9yzwrAAAAAP3EZLHzitEMhdjwIYGdGU0Cm68J"
-                                baseUrl="https://webapp.ntpc.co.in"
-                                onVerify={onVerify}
-                                onExpire={onExpire}
-                                size="normal"
-                            />
+  const handleRecaptchaError = (e: any) => {
+    setLoginLoading(false);
+    setError('Captcha verification failed. Please try again.');
+    console.error('Recaptcha Error:', e);
+  };
 
-                            <Button
-                                mode="elevated"
-                                onPress={send}
-                                style={styles.captchaButton}>
-                                Show Captcha
-                            </Button>
-                        </View>
+  const handleRecaptchaExpire = () => {
+    setLoginLoading(false);
+    setError('Captcha expired. Please try again.');
+  };
 
-                        {/* Get OTP Button */}
-                        {!showOTPField && (
-                            <TouchableOpacity
-                                style={styles.buttonStyle}
-                                activeOpacity={0.5}
-                                onPress={handleGetOtpPress}>
-                                {isOtpLoading ? (
-                                    <ActivityIndicator color="#FFFFFF" />
-                                ) : (
-                                    <Text style={styles.buttonTextStyle}>GET OTP</Text>
-                                )}
-                            </TouchableOpacity>
-                        )}
+  const handleRecaptchaClose = () => {
+    // If the captcha modal opens (challenge) and user closes it, stop loading.
+    setLoginLoading(false);
+  };
 
-                        {/* OTP Input and Login */}
-                        {showOTPField && (
-                            <>
-                                <View style={styles.SectionStyle}>
-                                    <TextInput
-                                        style={styles.inputStyle}
-                                        secureTextEntry={true}
-                                        editable={!isEditUserid}
-                                        onChangeText={setUserPassword}
-                                        placeholder="Enter OTP"
-                                        placeholderTextColor="#8b9cb5"
-                                        keyboardType="number-pad"
-                                        ref={passwordInputRef}
-                                        onSubmitEditing={Keyboard.dismiss}
-                                        blurOnSubmit={false}
-                                        underlineColorAndroid="transparent"
-                                        returnKeyType="done"
-                                        value={userPassword}
-                                    />
-                                </View>
+  const handleBack = () => {
+    Keyboard.dismiss();
+    if (loginLoading || otpLoading) return;
 
-                                {errortext !== '' && (
-                                    <Text style={styles.errorTextStyle}>{errortext}</Text>
-                                )}
+    setError('');
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 260,
+      useNativeDriver: true,
+    }).start(() => {
+      setOtp('');
+    });
+  };
 
-                                <View style={styles.buttonRow}>
-                                    <TouchableOpacity
-                                        style={[styles.buttonStyle, styles.loginButton]}
-                                        activeOpacity={0.5}
-                                        onPress={handleLoginPress}>
-                                        <Text style={styles.buttonTextStyle}>Login</Text>
-                                    </TouchableOpacity>
+  const handleVerifyOTP = async () => {
+    Keyboard.dismiss();
+    if (otpLoading) return;
 
-                                    <TouchableOpacity
-                                        style={[styles.buttonStyle, styles.resetButton]}
-                                        activeOpacity={0.5}
-                                        onPress={handleResetPress}>
-                                        <Text style={styles.buttonTextStyle}>Reset</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </>
-                        )}
+    if (!otp.trim()) return;
 
-                        {/* Footer Card */}
-                        <Card style={styles.footerCard} elevation={5}>
-                            <Card.Content>
-                                <Text style={styles.footerText}>
-                                    An initiative by{'\n'}
-                                    <Text style={styles.footerTextBold}>
-                                        NTPC QA Division{'\n'}
-                                        in association with NTPC IT Department
-                                    </Text>
-                                </Text>
-                                <Text style={styles.copyrightText}>
-                                    {'\u00A9'} NTPC Limited
-                                </Text>
-                            </Card.Content>
-                        </Card>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
+    setOtpLoading(true);
+    setError('');
+
+    try {
+      const response = await validateOtp(username.trim(), otp.trim());
+
+      if (response.statusCode === 200) {
+        console.log('Login successful!', response);
+        // TODO: Store token and navigate to home screen
+      } else {
+        setError(response.statusDescShort || 'Invalid OTP. Please try again.');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'An error occurred. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+        <View style={styles.mainContainer}>
+          {/* Background Image Section */}
+          <View style={styles.imageSection}>
+            <ImageBackground
+              source={require('./assets/images/login-page/illustration-01.png')}
+              style={styles.backgroundImage}
+              resizeMode="cover"
+            >
+              <View style={styles.overlay} />
+              <View style={styles.centeredLogoContainer}>
+                <Image
+                  source={require('./assets/images/logo/ntpc-logo-white.png')}
+                  style={styles.centeredLogo}
+                  resizeMode="contain"
+                />
+              </View>
+            </ImageBackground>
+          </View>
+
+          {/* White Card */}
+          <View style={styles.cardContainer}>
+            <View style={styles.solidCardWrapper}>
+              <View style={styles.cardInner}>
+                <CardContent
+                  slideAnim={slideAnim}
+                  username={username}
+                  setUsername={setUsername}
+                  otp={otp}
+                  setOtp={setOtp}
+                  handleLogin={handleLoginPress}
+                  handleBack={handleBack}
+                  handleVerifyOTP={handleVerifyOTP}
+                  loginLoading={loginLoading}
+                  otpLoading={otpLoading}
+                  error={error}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Mount Recaptcha once; no custom Modal/backdrop */}
+        <Recaptcha
+          ref={recaptchaRef}
+          siteKey={RECAPTCHA_SITE_KEY}
+          baseUrl="https://webapp.ntpc.co.in"
+          onVerify={handleRecaptchaVerify}
+          onError={handleRecaptchaError}
+          onExpire={handleRecaptchaExpire}
+          onClose={handleRecaptchaClose}
+          size="invisible"
+          hideBadge={true}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
+
+type CardContentProps = {
+  slideAnim: Animated.Value;
+  username: string;
+  setUsername: (v: string) => void;
+  otp: string;
+  setOtp: (v: string) => void;
+  handleLogin: () => void;
+  handleBack: () => void;
+  handleVerifyOTP: () => void;
+  loginLoading: boolean;
+  otpLoading: boolean;
+  error: string;
 };
 
-export default LoginScreen;
+const CardContent: React.FC<CardContentProps> = ({
+  slideAnim,
+  username,
+  setUsername,
+  otp,
+  setOtp,
+  handleLogin,
+  handleBack,
+  handleVerifyOTP,
+  loginLoading,
+  otpLoading,
+  error,
+}) => {
+  return (
+    <View style={styles.cardContent}>
+      <Animated.View
+        style={[
+          styles.screenContainer,
+          {
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
+        {/* Login Screen */}
+        <View style={styles.screen}>
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>
+            Don&apos;t have an account? <Text style={styles.signUpLink}>Sign up</Text>
+          </Text>
 
-const styles = StyleSheet.create({
-    mainBody: {
-        flex: 1,
-        backgroundColor: '#cceeff',
-    },
-    rootedContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: '#007C80',
-        padding: 20,
-    },
-    rootedText: {
-        color: 'white',
-        fontSize: 22,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    overlay: {
-        flex: 1,
-    },
-    scrollContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingVertical: 20,
-    },
-    logoContainer: {
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    logoImage: {
-        width: '90%',
-        height: width * 0.3,
-        resizeMode: 'contain',
-        marginBottom: 20,
-    },
-    appTitle: {
-        color: 'black',
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    plantImage: {
-        width: '85%',
-        height: width * 0.5,
-        borderRadius: 10,
-        resizeMode: 'cover',
-    },
-    SectionStyle: {
-        height: 50,
-        marginTop: 15,
-        marginHorizontal: 35,
-    },
-    inputStyle: {
-        flex: 1,
-        backgroundColor: '#002A6A',
-        color: 'white',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderWidth: 1,
-        borderRadius: 30,
-        borderColor: '#dadae8',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    captchaContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        marginHorizontal: 20,
-        marginVertical: 15,
-    },
-    checkbox: {
-        height: 20,
-        width: 20,
-    },
-    captchaText: {
-        color: 'black',
-        fontSize: 14,
-    },
-    captchaButton: {
-        backgroundColor: '#bcdeefff',
-    },
-    buttonStyle: {
-        backgroundColor: '#36454F',
-        height: 45,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 15,
-        marginHorizontal: 35,
-        marginVertical: 10,
-    },
-    buttonTextStyle: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 10,
-    },
-    loginButton: {
-        backgroundColor: 'green',
-        width: 120,
-        marginHorizontal: 5,
-    },
-    resetButton: {
-        width: 120,
-        marginHorizontal: 5,
-    },
-    errorTextStyle: {
-        color: 'red',
-        textAlign: 'center',
-        fontSize: 14,
-        marginTop: 10,
-    },
-    footerCard: {
-        width: '96%',
-        backgroundColor: '#e6e6e6',
-        marginTop: 20,
-        alignSelf: 'center',
-    },
-    footerText: {
-        fontSize: 14,
-        color: 'black',
-        textAlign: 'center',
-        marginBottom: 5,
-    },
-    footerTextBold: {
-        fontSize: 15,
-        fontWeight: 'bold',
-    },
-    copyrightText: {
-        fontSize: 12,
-        color: 'black',
-        textAlign: 'center',
-        marginTop: 5,
-    },
-});
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputContainer}>
+            <View style={styles.inputIcon}>
+              <UserIcon size={20} color="#9CA3AF" />
+            </View>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Enter username"
+              placeholderTextColor="#C7CACD"
+              autoCapitalize="none"
+              editable={!loginLoading}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, (!username.trim() || loginLoading) && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={!username.trim() || loginLoading}
+          >
+            <Text style={styles.buttonText}>{loginLoading ? 'Verifying...' : 'Login'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* OTP Screen */}
+        <View style={styles.screen}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={loginLoading || otpLoading}>
+              <ArrowLeftIcon size={26} color="#111827" />
+            </TouchableOpacity>
+            <Text style={styles.titleWithBack}>Enter OTP</Text>
+          </View>
+
+          <Text style={styles.subtitle}>
+            We have sent a<Text style={styles.signUpLink}> 6 digit </Text>password to your email.
+          </Text>
+
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputContainer}>
+            <View style={styles.inputIcon}>
+              <LockIcon size={20} color="#9CA3AF" />
+            </View>
+            <TextInput
+              style={styles.input}
+              value={otp}
+              onChangeText={setOtp}
+              placeholder="Enter OTP"
+              placeholderTextColor="#C7CACD"
+              keyboardType="number-pad"
+              maxLength={6}
+              editable={!otpLoading}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, (!otp.trim() || otpLoading) && styles.buttonDisabled]}
+            onPress={handleVerifyOTP}
+            disabled={!otp.trim() || otpLoading}
+          >
+            <Text style={styles.buttonText}>{otpLoading ? 'Verifying...' : 'Verify OTP'}</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
+export default App;
