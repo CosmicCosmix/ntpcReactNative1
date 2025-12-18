@@ -149,5 +149,19 @@ export const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.5,
     },
+    errorContainer: {
+        backgroundColor: '#FEE2E2',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#DC2626',
+    },
+    errorText: {
+        color: '#DC2626',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+
 });
 export { HORIZONTAL_PADDING };

@@ -14,7 +14,10 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './assets/css/App.styles';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { validateUser, validateOtp } from './services/authService';
+
 const { width } = Dimensions.get('window');
+
 // Custom SVG Icon Components
 const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -36,6 +39,7 @@ const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
     />
   </Svg>
 );
+
 const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -54,6 +58,7 @@ const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
     />
   </Svg>
 );
+
 const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -65,22 +70,45 @@ const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
     />
   </Svg>
 );
+
 function App() {
   const [username, setUsername] = useState('');
   const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const handleLogin = () => {
+
+  const handleLogin = async () => {
     Keyboard.dismiss();
-    if (username.trim()) {
-      Animated.timing(slideAnim, {
-        toValue: -width,
-        duration: 260,
-        useNativeDriver: true,
-      }).start();
+    if (!username.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await validateUser(username.trim());
+
+      if (response.statusCode === 200) {
+        // Success - move to OTP screen
+        Animated.timing(slideAnim, {
+          toValue: -width,
+          duration: 260,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        // Error - show message
+        setError(response.message || 'Invalid username. Please try again.');
+      }
+    } catch (error: any) {
+      setError(error.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
+
   const handleBack = () => {
     Keyboard.dismiss();
+    setError('');
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 260,
@@ -89,12 +117,30 @@ function App() {
       setOtp('');
     });
   };
-  const handleVerifyOTP = () => {
+
+  const handleVerifyOTP = async () => {
     Keyboard.dismiss();
-    if (otp.trim()) {
-      console.log('Verifying OTP:', otp);
+    if (!otp.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await validateOtp(username.trim(), otp.trim());
+
+      if (response.statusCode === 200) {
+        // Success - login complete
+        console.log('Login successful!', response);
+      } else {
+        setError(response.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error: any) {
+      setError(error.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <SafeAreaProvider>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -132,6 +178,8 @@ function App() {
                   handleLogin={handleLogin}
                   handleBack={handleBack}
                   handleVerifyOTP={handleVerifyOTP}
+                  loading={loading}
+                  error={error}
                 />
               </View>
             </View>
@@ -141,6 +189,7 @@ function App() {
     </SafeAreaProvider>
   );
 }
+
 type CardContentProps = {
   slideAnim: Animated.Value;
   username: string;
@@ -150,7 +199,10 @@ type CardContentProps = {
   handleLogin: () => void;
   handleBack: () => void;
   handleVerifyOTP: () => void;
+  loading: boolean;
+  error: string;
 };
+
 const CardContent: React.FC<CardContentProps> = ({
   slideAnim,
   username,
@@ -160,6 +212,8 @@ const CardContent: React.FC<CardContentProps> = ({
   handleLogin,
   handleBack,
   handleVerifyOTP,
+  loading,
+  error,
 }) => {
   return (
     <View style={styles.cardContent}>
@@ -175,8 +229,16 @@ const CardContent: React.FC<CardContentProps> = ({
         <View style={styles.screen}>
           <Text style={styles.title}>Login</Text>
           <Text style={styles.subtitle}>
-            Don&apos;t have an account? <Text style={styles.signUpLink}>Sign up</Text>
+            Don't have an account? <Text style={styles.signUpLink}>Sign up</Text>
           </Text>
+
+          {/* Error Message */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           {/* Username Input Field with SVG Icon */}
           <View style={styles.inputContainer}>
             <View style={styles.inputIcon}>
@@ -184,25 +246,35 @@ const CardContent: React.FC<CardContentProps> = ({
             </View>
             <TextInput
               style={styles.input}
+              value={username}
               onChangeText={setUsername}
               placeholder="Enter username"
               placeholderTextColor="#C7CACD"
-              autoCapitalize="words"
+              autoCapitalize="none"
+              editable={!loading}
             />
           </View>
+
           <TouchableOpacity
-            style={[styles.button, !username.trim() && styles.buttonDisabled]}
+            style={[styles.button, (!username.trim() || loading) && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={!username.trim()}
+            disabled={!username.trim() || loading}
           >
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>
+              {loading ? 'Validating...' : 'Login'}
+            </Text>
           </TouchableOpacity>
         </View>
+
         {/* OTP Screen */}
         <View style={styles.screen}>
           {/* Back button and Title on same row */}
           <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBack}
+              disabled={loading}
+            >
               <ArrowLeftIcon size={26} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.titleWithBack}>Enter OTP</Text>
@@ -212,6 +284,14 @@ const CardContent: React.FC<CardContentProps> = ({
             <Text style={styles.signUpLink}> 6 digit </Text>
             password to your email.
           </Text>
+
+          {/* Error Message */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           {/* OTP Input Field with SVG Icon */}
           <View style={styles.inputContainer}>
             <View style={styles.inputIcon}>
@@ -225,18 +305,23 @@ const CardContent: React.FC<CardContentProps> = ({
               placeholderTextColor="#C7CACD"
               keyboardType="number-pad"
               maxLength={6}
+              editable={!loading}
             />
           </View>
+
           <TouchableOpacity
-            style={[styles.button, !otp.trim() && styles.buttonDisabled]}
+            style={[styles.button, (!otp.trim() || loading) && styles.buttonDisabled]}
             onPress={handleVerifyOTP}
-            disabled={!otp.trim()}
+            disabled={!otp.trim() || loading}
           >
-            <Text style={styles.buttonText}>Verify OTP</Text>
+            <Text style={styles.buttonText}>
+              {loading ? 'Verifying...' : 'Verify OTP'}
+            </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
     </View>
   );
 };
+
 export default App;
