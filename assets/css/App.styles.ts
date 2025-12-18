@@ -162,6 +162,5 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-
 });
 export { HORIZONTAL_PADDING };
