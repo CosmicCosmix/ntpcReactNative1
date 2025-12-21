@@ -13,14 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
-
 import { styles } from './assets/css/App.styles';
 import { validateOtp, validateUser } from './services/authService';
 import Recaptcha, { RecaptchaRef } from 'react-native-recaptcha-that-works';
 import { RECAPTCHA_SITE_KEY } from './constants/config';
-
 const { width } = Dimensions.get('window');
-
 // Custom SVG Icon Components
 const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -42,7 +39,6 @@ const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
     />
   </Svg>
 );
-
 const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -61,7 +57,6 @@ const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
     />
   </Svg>
 );
-
 const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -73,17 +68,14 @@ const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
     />
   </Svg>
 );
-
 function App() {
   const [username, setUsername] = useState('');
   const [otp, setOtp] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState('');
-
   const slideAnim = useRef(new Animated.Value(0)).current;
   const recaptchaRef = useRef<RecaptchaRef | null>(null);
-
   const openCaptcha = () => {
     // If Recaptcha isn't ready for any reason, fail gracefully.
     try {
@@ -93,24 +85,18 @@ function App() {
       setError('Captcha could not be started. Please try again.');
     }
   };
-
   const handleLoginPress = () => {
     Keyboard.dismiss();
     if (loginLoading) return;
-
     if (!username.trim()) return;
-
     setError('');
     setLoginLoading(true);
-
     // Trigger invisible reCAPTCHA; once verified, onVerify() will run and call the API.
     openCaptcha();
   };
-
   const handleRecaptchaVerify = async (token: string) => {
     try {
       const response = await validateUser(username.trim(), token);
-
       if (response.statusCode === 200) {
         Animated.timing(slideAnim, {
           toValue: -width,
@@ -126,27 +112,22 @@ function App() {
       setLoginLoading(false);
     }
   };
-
   const handleRecaptchaError = (e: any) => {
     setLoginLoading(false);
     setError('Captcha verification failed. Please try again.');
     console.error('Recaptcha Error:', e);
   };
-
   const handleRecaptchaExpire = () => {
     setLoginLoading(false);
     setError('Captcha expired. Please try again.');
   };
-
   const handleRecaptchaClose = () => {
     // If the captcha modal opens (challenge) and user closes it, stop loading.
     setLoginLoading(false);
   };
-
   const handleBack = () => {
     Keyboard.dismiss();
     if (loginLoading || otpLoading) return;
-
     setError('');
     Animated.timing(slideAnim, {
       toValue: 0,
@@ -156,19 +137,14 @@ function App() {
       setOtp('');
     });
   };
-
   const handleVerifyOTP = async () => {
     Keyboard.dismiss();
     if (otpLoading) return;
-
     if (!otp.trim()) return;
-
     setOtpLoading(true);
     setError('');
-
     try {
       const response = await validateOtp(username.trim(), otp.trim());
-
       if (response.statusCode === 200) {
         console.log('Login successful!', response);
         // TODO: Store token and navigate to home screen
@@ -181,7 +157,6 @@ function App() {
       setOtpLoading(false);
     }
   };
-
   return (
     <SafeAreaProvider>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -204,7 +179,6 @@ function App() {
               </View>
             </ImageBackground>
           </View>
-
           {/* White Card */}
           <View style={styles.cardContainer}>
             <View style={styles.solidCardWrapper}>
@@ -221,12 +195,12 @@ function App() {
                   loginLoading={loginLoading}
                   otpLoading={otpLoading}
                   error={error}
+                  openCaptcha={openCaptcha}
                 />
               </View>
             </View>
           </View>
         </View>
-
         {/* Mount Recaptcha once; no custom Modal/backdrop */}
         <Recaptcha
           ref={recaptchaRef}
@@ -236,14 +210,13 @@ function App() {
           onError={handleRecaptchaError}
           onExpire={handleRecaptchaExpire}
           onClose={handleRecaptchaClose}
-          size="invisible"
-          hideBadge={true}
+          size="normal"
+          hideBadge={false}
         />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
-
 type CardContentProps = {
   slideAnim: Animated.Value;
   username: string;
@@ -253,11 +226,11 @@ type CardContentProps = {
   handleLogin: () => void;
   handleBack: () => void;
   handleVerifyOTP: () => void;
+  openCaptcha: () => void;
   loginLoading: boolean;
   otpLoading: boolean;
   error: string;
 };
-
 const CardContent: React.FC<CardContentProps> = ({
   slideAnim,
   username,
@@ -270,6 +243,7 @@ const CardContent: React.FC<CardContentProps> = ({
   loginLoading,
   otpLoading,
   error,
+  openCaptcha,
 }) => {
   return (
     <View style={styles.cardContent}>
@@ -287,13 +261,11 @@ const CardContent: React.FC<CardContentProps> = ({
           <Text style={styles.subtitle}>
             Don&apos;t have an account? <Text style={styles.signUpLink}>Sign up</Text>
           </Text>
-
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
-
           <View style={styles.inputContainer}>
             <View style={styles.inputIcon}>
               <UserIcon size={20} color="#9CA3AF" />
@@ -308,7 +280,9 @@ const CardContent: React.FC<CardContentProps> = ({
               editable={!loginLoading}
             />
           </View>
-
+          <TouchableOpacity onPress={openCaptcha}>
+            <Text>Show Captcha</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, (!username.trim() || loginLoading) && styles.buttonDisabled]}
             onPress={handleLogin}
@@ -317,7 +291,6 @@ const CardContent: React.FC<CardContentProps> = ({
             <Text style={styles.buttonText}>{loginLoading ? 'Verifying...' : 'Login'}</Text>
           </TouchableOpacity>
         </View>
-
         {/* OTP Screen */}
         <View style={styles.screen}>
           <View style={styles.headerRow}>
@@ -326,17 +299,14 @@ const CardContent: React.FC<CardContentProps> = ({
             </TouchableOpacity>
             <Text style={styles.titleWithBack}>Enter OTP</Text>
           </View>
-
           <Text style={styles.subtitle}>
             We have sent a<Text style={styles.signUpLink}> 6 digit </Text>password to your email.
           </Text>
-
           {error ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
-
           <View style={styles.inputContainer}>
             <View style={styles.inputIcon}>
               <LockIcon size={20} color="#9CA3AF" />
@@ -352,7 +322,6 @@ const CardContent: React.FC<CardContentProps> = ({
               editable={!otpLoading}
             />
           </View>
-
           <TouchableOpacity
             style={[styles.button, (!otp.trim() || otpLoading) && styles.buttonDisabled]}
             onPress={handleVerifyOTP}
@@ -365,5 +334,4 @@ const CardContent: React.FC<CardContentProps> = ({
     </View>
   );
 };
-
 export default App;
