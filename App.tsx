@@ -74,30 +74,51 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const slideAnim = useRef(new Animated.Value(0)).current;
   const recaptchaRef = useRef<RecaptchaRef | null>(null);
   const openCaptcha = () => {
-    // If Recaptcha isn't ready for any reason, fail gracefully.
     try {
       recaptchaRef.current?.open();
     } catch (e) {
-      setLoginLoading(false);
+      console.error('Captcha open error:', e);
       setError('Captcha could not be started. Please try again.');
     }
   };
-  const handleLoginPress = () => {
+  const handleRecaptchaVerify = (token: string) => {
+    console.log('Recaptcha token received:', token);
+    setCaptchaToken(token);
+  };
+  const handleRecaptchaError = (error: any) => {
+    console.error('Recaptcha Error:', error);
+    setError('Captcha verification failed. Please try again.');
+    setCaptchaToken('');
+  };
+  const handleRecaptchaExpire = () => {
+    console.log('Recaptcha expired');
+    setError('Captcha expired. Please try again.');
+    setCaptchaToken('');
+  };
+  const handleRecaptchaClose = () => {
+    console.log('Recaptcha closed by user');
+  };
+  const handleLoginPress = async () => {
     Keyboard.dismiss();
     if (loginLoading) return;
-    if (!username.trim()) return;
+    if (!username.trim()) {
+      setError('Please enter username');
+      return;
+    }
+    if (!captchaToken) {
+      setError('Please complete the captcha first');
+      return;
+    }
     setError('');
     setLoginLoading(true);
-    // Trigger invisible reCAPTCHA; once verified, onVerify() will run and call the API.
-    openCaptcha();
-  };
-  const handleRecaptchaVerify = async (token: string) => {
     try {
-      const response = await validateUser(username.trim(), token);
+      const response = await validateUser(username.trim(), captchaToken);
       if (response.statusCode === 200) {
+        // Success - move to OTP screen
         Animated.timing(slideAnim, {
           toValue: -width,
           duration: 260,
@@ -105,30 +126,21 @@ function App() {
         }).start();
       } else {
         setError(response.statusDescShort || 'Invalid username. Please try again.');
+        setCaptchaToken(''); // Reset captcha token on error
       }
     } catch (e: any) {
+      console.error('Validation error:', e);
       setError(e?.message || 'An error occurred. Please try again.');
+      setCaptchaToken(''); // Reset captcha token on error
     } finally {
       setLoginLoading(false);
     }
-  };
-  const handleRecaptchaError = (e: any) => {
-    setLoginLoading(false);
-    setError('Captcha verification failed. Please try again.');
-    console.error('Recaptcha Error:', e);
-  };
-  const handleRecaptchaExpire = () => {
-    setLoginLoading(false);
-    setError('Captcha expired. Please try again.');
-  };
-  const handleRecaptchaClose = () => {
-    // If the captcha modal opens (challenge) and user closes it, stop loading.
-    setLoginLoading(false);
   };
   const handleBack = () => {
     Keyboard.dismiss();
     if (loginLoading || otpLoading) return;
     setError('');
+    setCaptchaToken(''); // Reset captcha token when going back
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 260,
@@ -196,12 +208,13 @@ function App() {
                   otpLoading={otpLoading}
                   error={error}
                   openCaptcha={openCaptcha}
+                  captchaToken={captchaToken}
                 />
               </View>
             </View>
           </View>
         </View>
-        {/* Mount Recaptcha once; no custom Modal/backdrop */}
+        {/* Recaptcha Component - Hidden, triggered programmatically */}
         <Recaptcha
           ref={recaptchaRef}
           siteKey={RECAPTCHA_SITE_KEY}
@@ -230,6 +243,7 @@ type CardContentProps = {
   loginLoading: boolean;
   otpLoading: boolean;
   error: string;
+  captchaToken: string;
 };
 const CardContent: React.FC<CardContentProps> = ({
   slideAnim,
@@ -244,6 +258,7 @@ const CardContent: React.FC<CardContentProps> = ({
   otpLoading,
   error,
   openCaptcha,
+  captchaToken,
 }) => {
   return (
     <View style={styles.cardContent}>
@@ -281,12 +296,12 @@ const CardContent: React.FC<CardContentProps> = ({
             />
           </View>
           <TouchableOpacity onPress={openCaptcha}>
-            <Text>Show Captcha</Text>
+            <Text>Show Captcha {captchaToken ? '✓' : ''}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, (!username.trim() || loginLoading) && styles.buttonDisabled]}
+            style={[styles.button, (!username.trim() || loginLoading || !captchaToken) && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={!username.trim() || loginLoading}
+            disabled={!username.trim() || loginLoading || !captchaToken}
           >
             <Text style={styles.buttonText}>{loginLoading ? 'Verifying...' : 'Login'}</Text>
           </TouchableOpacity>
@@ -294,7 +309,11 @@ const CardContent: React.FC<CardContentProps> = ({
         {/* OTP Screen */}
         <View style={styles.screen}>
           <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={loginLoading || otpLoading}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBack}
+              disabled={loginLoading || otpLoading}
+            >
               <ArrowLeftIcon size={26} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.titleWithBack}>Enter OTP</Text>
