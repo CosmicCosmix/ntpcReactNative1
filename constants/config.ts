@@ -7,5 +7,4 @@ export const certsSha256 = [
 export const disableSslPinning = false;
 export const ReqTimeOutInt = 60000;
 export const MaxImageSize = 4718592;
-// You'll need to get this from your team
 export const RECAPTCHA_SITE_KEY = "6Le9yzwrAAAAAP3EZLHzitEMhdjwIYGdGU0Cm68J";

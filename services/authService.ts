@@ -2,10 +2,12 @@
 import { fetch } from 'react-native-ssl-pinning';
 import { Platform } from 'react-native';
 import { certsSha256, ReqTimeOutInt } from '../constants/config';
+import { API_KEY } from '@env'; // Import from environment variables
+
 const urlBaseProd = "https://webapp.ntpc.co.in/nqweldapi/api/";
 const urlValidateUser = urlBaseProd + "Auth/ValidateUserV2";
 const urlValidateOtp = urlBaseProd + "Auth/ValidateOTP";
-const API_KEY = "111112D300E4F5G60099";
+
 export interface ValidateUserResponse {
     statusCode: number;
     statusDescShort?: string;
@@ -14,6 +16,7 @@ export interface ValidateUserResponse {
     userid?: string;
     tokenString?: string;
 }
+
 export interface ValidateOtpResponse {
     statusCode: number;
     statusDescShort?: string;
@@ -21,6 +24,7 @@ export interface ValidateOtpResponse {
     data?: any;
     tokenString?: string;
 }
+
 export const validateUser = async (
     username: string,
     captchaToken: string
@@ -28,18 +32,22 @@ export const validateUser = async (
     try {
         console.log('Validating user:', username);
         console.log('With captcha token:', captchaToken);
+
         const fetchOptions: any = {
             method: 'POST',
             timeoutInterval: ReqTimeOutInt,
             headers: {
-                'XApiKey': API_KEY,
+                'XAPIKEY': API_KEY,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                UserLoginId: username,
-                CaptchaToken: captchaToken
+                userLoginId: username,
+                captchaToken: captchaToken
             })
         };
+
+        console.log('Request body:', fetchOptions.body);
+
         // Add SSL pinning only for Android
         if (Platform.OS === 'android') {
             fetchOptions.pkPinning = true;
@@ -50,8 +58,10 @@ export const validateUser = async (
             // Disable SSL pinning for iOS
             fetchOptions.disableAllSecurity = true;
         }
+
         const response = await fetch(urlValidateUser, fetchOptions);
         console.log('Response status:', response.status);
+
         if (response.status === 401) {
             return {
                 statusCode: 401,
@@ -59,6 +69,7 @@ export const validateUser = async (
                 statusDescLong: 'Your session token expired. Please try again.'
             };
         }
+
         if (response.status !== 200) {
             return {
                 statusCode: response.status,
@@ -66,8 +77,10 @@ export const validateUser = async (
                 statusDescLong: 'Something went wrong. Please try again.'
             };
         }
+
         const jsonResponse = await response.json();
-        console.log('API Response:', jsonResponse);
+        console.log('API Response:', JSON.stringify(jsonResponse));
+
         // Return with proper type
         return {
             statusCode: jsonResponse.statusCode || 0,
@@ -87,24 +100,31 @@ export const validateUser = async (
         };
     }
 };
+
 export const validateOtp = async (
     username: string,
-    otp: string
+    otp: string,
+    tokenString: string
 ): Promise<ValidateOtpResponse> => {
     try {
         console.log('Validating OTP for user:', username);
+        console.log('Token string:', tokenString);
+
         const fetchOptions: any = {
             method: 'POST',
             timeoutInterval: ReqTimeOutInt,
             headers: {
-                'XApiKey': API_KEY,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                UserLoginId: username,
-                otp: otp
+                userName: username,
+                password: otp,
+                tokenString: tokenString
             })
         };
+
+        console.log('OTP Request body:', fetchOptions.body);
+
         // Add SSL pinning only for Android
         if (Platform.OS === 'android') {
             fetchOptions.pkPinning = true;
@@ -115,8 +135,10 @@ export const validateOtp = async (
             // Disable SSL pinning for iOS
             fetchOptions.disableAllSecurity = true;
         }
+
         const response = await fetch(urlValidateOtp, fetchOptions);
         console.log('OTP Response status:', response.status);
+
         if (response.status === 401) {
             return {
                 statusCode: 401,
@@ -124,6 +146,7 @@ export const validateOtp = async (
                 statusDescLong: 'Your session token expired. Please try again.'
             };
         }
+
         if (response.status !== 200) {
             return {
                 statusCode: response.status,
@@ -131,8 +154,10 @@ export const validateOtp = async (
                 statusDescLong: 'Something went wrong. Please try again.'
             };
         }
+
         const jsonResponse = await response.json();
-        console.log('OTP API Response:', jsonResponse);
+        console.log('OTP API Response:', JSON.stringify(jsonResponse));
+
         // Return with proper type
         return {
             statusCode: jsonResponse.statusCode || 0,
