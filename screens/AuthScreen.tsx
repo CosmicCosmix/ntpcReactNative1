@@ -1,3 +1,4 @@
+// screens/AuthScreen.tsx
 import React, { useRef, useState } from 'react';
 import {
     Animated,
@@ -19,10 +20,8 @@ import { validateOtp, validateUser } from '../services/authService';
 import Recaptcha, { RecaptchaRef } from 'react-native-recaptcha-that-works';
 import { RECAPTCHA_SITE_KEY } from '../constants/config';
 import type { RootStackParamList } from '../App';
-
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 const { width } = Dimensions.get('window');
-
 // Custom SVG Icon Components
 const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -44,7 +43,6 @@ const UserIcon = ({ size = 20, color = '#9CA3AF' }) => (
         />
     </Svg>
 );
-
 const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path
@@ -63,7 +61,6 @@ const LockIcon = ({ size = 20, color = '#9CA3AF' }) => (
         />
     </Svg>
 );
-
 const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path
@@ -75,7 +72,6 @@ const ArrowLeftIcon = ({ size = 24, color = '#111827' }) => (
         />
     </Svg>
 );
-
 type CardContentProps = {
     slideAnim: Animated.Value;
     username: string;
@@ -92,7 +88,6 @@ type CardContentProps = {
     captchaToken: string;
     onSkipToHome: () => void;
 };
-
 const CardContent: React.FC<CardContentProps> = ({
     slideAnim,
     username,
@@ -209,7 +204,6 @@ const CardContent: React.FC<CardContentProps> = ({
         </View>
     );
 };
-
 export default function AuthScreen({ navigation }: Props) {
     const [username, setUsername] = useState('');
     const [otp, setOtp] = useState('');
@@ -220,7 +214,6 @@ export default function AuthScreen({ navigation }: Props) {
     const [tempTokenStr, setTempTokenStr] = useState(''); // Store token from first API call
     const slideAnim = useRef(new Animated.Value(0)).current;
     const recaptchaRef = useRef<RecaptchaRef | null>(null);
-
     const openCaptcha = () => {
         try {
             recaptchaRef.current?.open();
@@ -229,28 +222,23 @@ export default function AuthScreen({ navigation }: Props) {
             setError('Captcha could not be started. Please try again.');
         }
     };
-
     const handleRecaptchaVerify = (token: string) => {
         console.log('Recaptcha token received:', token);
         setCaptchaToken(token);
     };
-
     const handleRecaptchaError = (err: any) => {
         console.error('Recaptcha Error:', err);
         setError('Captcha verification failed. Please try again.');
         setCaptchaToken('');
     };
-
     const handleRecaptchaExpire = () => {
         console.log('Recaptcha expired');
         setError('Captcha expired. Please try again.');
         setCaptchaToken('');
     };
-
     const handleRecaptchaClose = () => {
         console.log('Recaptcha closed by user');
     };
-
     const handleLoginPress = async () => {
         Keyboard.dismiss();
         if (loginLoading) return;
@@ -291,7 +279,6 @@ export default function AuthScreen({ navigation }: Props) {
             setLoginLoading(false);
         }
     };
-
     const handleBack = () => {
         Keyboard.dismiss();
         if (loginLoading || otpLoading) return;
@@ -306,7 +293,6 @@ export default function AuthScreen({ navigation }: Props) {
             setOtp('');
         });
     };
-
     const handleVerifyOTP = async () => {
         Keyboard.dismiss();
         if (otpLoading) return;
@@ -319,7 +305,6 @@ export default function AuthScreen({ navigation }: Props) {
             handleBack();
             return;
         }
-
         setOtpLoading(true);
         setError('');
         try {
@@ -337,7 +322,6 @@ export default function AuthScreen({ navigation }: Props) {
             setOtpLoading(false);
         }
     };
-
     return (
         <>
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />

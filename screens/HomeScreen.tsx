@@ -1,8 +1,6 @@
 // screens/HomeScreen.tsx
-
 import React from 'react';
 import { View, Text } from 'react-native';
-
 const HomeScreen: React.FC = () => {
     return (
         <View>
@@ -10,5 +8,4 @@ const HomeScreen: React.FC = () => {
         </View>
     );
 };
-
 export default HomeScreen;

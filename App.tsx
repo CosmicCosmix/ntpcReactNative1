@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthScreen from './screens/AuthScreen';
 import HomeScreen from './screens/HomeScreen';
+import AppDrawer from './navigation/AppDrawer';
 export type RootStackParamList = {
   Auth: undefined;
   Home: undefined;
@@ -16,7 +17,7 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Auth">
           <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Home" component={AppDrawer} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
