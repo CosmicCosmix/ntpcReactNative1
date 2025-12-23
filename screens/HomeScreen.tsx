@@ -1,11 +1,14 @@
 // screens/HomeScreen.tsx
 import React from 'react';
-import { View, Text } from 'react-native';
-const HomeScreen: React.FC = () => {
+import { Text } from 'react-native';
+import AppLayout from '../components/AppLayout';
+import { RedButton, BlueButton } from '../screens/ContactScreen.tsx';
+export default function HomeScreena() {
     return (
-        <View>
-            <Text>Home page</Text>
-        </View>
+        <AppLayout title="Home">
+            <Text>This is Home Page.</Text>
+            <RedButton label="Home red" />
+            <BlueButton />
+        </AppLayout>
     );
-};
-export default HomeScreen;
+}

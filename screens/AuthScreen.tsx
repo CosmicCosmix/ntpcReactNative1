@@ -311,8 +311,8 @@ export default function AuthScreen({ navigation }: Props) {
             // Pass the tokenString from first API call
             const response = await validateOtp(username.trim(), otp.trim(), tempTokenStr);
             if (response.statusCode === 200) {
-                // Success - navigate to Home
-                navigation.replace('Home');
+                // Success - navigate to MainApp the wrapper for all screens, not the Home screen directly
+                navigation.replace('MainApp');
             } else {
                 setError(response.statusDescShort || 'Invalid OTP. Please try again.');
             }
@@ -362,7 +362,7 @@ export default function AuthScreen({ navigation }: Props) {
                                     error={error}
                                     openCaptcha={openCaptcha}
                                     captchaToken={captchaToken}
-                                    onSkipToHome={() => navigation.navigate('Home')}
+                                    onSkipToHome={() => navigation.navigate('MainApp')}
                                 />
                             </View>
                         </View>

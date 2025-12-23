@@ -1,7 +1,8 @@
+// components/AppLayout.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 export default function AppLayout({
     title,
     children,
@@ -12,25 +13,27 @@ export default function AppLayout({
     const navigation = useNavigation<any>();
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'right', 'left']}>
+
             {/* Top Bar */}
-            <View style={styles.topBar}>
+            < View style={styles.topBar} >
                 <TouchableOpacity onPress={() => navigation.openDrawer()}>
                     <Text style={styles.menu}>☰</Text>
                 </TouchableOpacity>
                 <Text style={styles.title}>{title}</Text>
-            </View>
+            </View >
 
             {/* Content */}
-            <View style={styles.content}>{children}</View>
+            < View style={styles.content} > {children}</View >
 
             {/* Bottom Bar */}
-            <View style={styles.bottomBar}>
+            < View style={styles.bottomBar} >
                 <Text onPress={() => navigation.navigate('Home')}>Home</Text>
                 <Text onPress={() => navigation.navigate('News')}>News</Text>
                 <Text onPress={() => navigation.navigate('About')}>About</Text>
-            </View>
-        </View>
+            </View >
+
+        </SafeAreaView >
     );
 }
 
