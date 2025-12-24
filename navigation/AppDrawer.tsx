@@ -5,16 +5,16 @@ import HomeScreen from '../screens/HomeScreen';
 import NewsScreen from '../screens/NewsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ContactScreen from '../screens/ContactScreen';
-
+import CameraScreen from '../screens/CameraScreen';
 const Drawer = createDrawerNavigator();
-
 export default function AppDrawer() {
     return (
         <Drawer.Navigator screenOptions={{ headerShown: false, drawerStyle: { width: 240 } }}>
-            <Drawer.Screen name="Home" component={HomeScreen} />
+            <Drawer.Screen name="Homeo" component={HomeScreen} />
             <Drawer.Screen name="News" component={NewsScreen} />
             <Drawer.Screen name="About" component={AboutScreen} />
             <Drawer.Screen name="Contact" component={ContactScreen} />
+            <Drawer.Screen name="Camera" component={CameraScreen} />
         </Drawer.Navigator>
     );
 }

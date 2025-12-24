@@ -1,8 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AppLayout from '../components/AppLayout';
-
-
 export default function ContactScreen() {
     return (
         <AppLayout title="Contact">
@@ -11,7 +9,6 @@ export default function ContactScreen() {
         </AppLayout>
     );
 }
-
 export function RedButton({ label }: { label: string }) {
     return (
         <TouchableOpacity style={[styles.button, styles.RedButtono]}>
@@ -35,7 +32,6 @@ export function GreenButton() {
         </TouchableOpacity>
     );
 }
-
 const styles = StyleSheet.create({
     button: {
         padding: 10,

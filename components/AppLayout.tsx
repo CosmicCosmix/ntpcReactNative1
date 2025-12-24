@@ -3,18 +3,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-export default function AppLayout({
-    title,
-    children,
-}: {
-    title: string;
-    children: React.ReactNode;
-}) {
+export default function AppLayout({ title, children, }: { title: string; children: React.ReactNode; }) {
     const navigation = useNavigation<any>();
-
     return (
         <SafeAreaView style={styles.container} edges={['top', 'right', 'left']}>
-
             {/* Top Bar */}
             < View style={styles.topBar} >
                 <TouchableOpacity onPress={() => navigation.openDrawer()}>
@@ -22,21 +14,17 @@ export default function AppLayout({
                 </TouchableOpacity>
                 <Text style={styles.title}>{title}</Text>
             </View >
-
             {/* Content */}
             < View style={styles.content} > {children}</View >
-
             {/* Bottom Bar */}
             < View style={styles.bottomBar} >
-                <Text onPress={() => navigation.navigate('Home')}>Home</Text>
-                <Text onPress={() => navigation.navigate('News')}>News</Text>
-                <Text onPress={() => navigation.navigate('About')}>About</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Homeo')}><Text >Home</Text></TouchableOpacity> // .navigate('jo bhi naam') ye naam, jo idhar Homeo kar diya; ye naam AppDrawer me defined hain
+                <TouchableOpacity onPress={() => navigation.navigate('Camera')}><Text >Camera</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('About')}><Text >About</Text></TouchableOpacity>
             </View >
-
         </SafeAreaView >
     );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6F8' },
     topBar: {
